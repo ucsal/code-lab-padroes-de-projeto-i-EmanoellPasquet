@@ -2,14 +2,10 @@ package br.com.mariojp.app.paint;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Container;
 import java.awt.Dimension;
-import java.awt.FlowLayout;
-import java.awt.MenuItem;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
-
 import javax.swing.Box;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
@@ -28,21 +24,19 @@ import javax.swing.UIManager.LookAndFeelInfo;
 import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import java.awt.Toolkit;
 
 public class Paint extends JFrame {
 
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = 1L;
-	
-	
+
+
 	private Canvas canvas;
 	private Color color = Color.WHITE;
 	private JButton blackButton, blueButton, greenButton, redButton, magentaButton, grayButton,
-			orangeButton, yellowButton, pinkButton, cyanButton, lightGrayButton, rectangle, pencil;
+	orangeButton, yellowButton, pinkButton, cyanButton, lightGrayButton, rectangle, pencil, undo, redo, clearButton;
 	
-	private JMenuItem clearButton, saveButton, loadButton, saveAsButton, colorPicker;
+	private JMenuItem  saveButton, loadButton, saveAsButton, colorPicker;
 	private JFileChooser fileChooser;
 	private File file;
 
@@ -50,18 +44,22 @@ public class Paint extends JFrame {
 	private Icon save = new ImageIcon(getClass().getResource("/images/save.png"));
 	private Icon pencilIcon = new ImageIcon(getClass().getResource("/images/pencil.png"));
 	private Icon rect = new ImageIcon(getClass().getResource("/images/rect.png"));
+	private Icon undoIcon = new ImageIcon(getClass().getResource("/images/undo.png"));
+	private Icon redoIcon = new ImageIcon(getClass().getResource("/images/redo.png"));
+	private Icon clearIcon = new ImageIcon(getClass().getResource("/images/clear.png"));
+
 	private int saveCounter = 0;
 	private JLabel filenameBar, thicknessStat;
 	private JSlider thicknessSlider;
 	private int width, height;
-	
+
 	ChangeListener thick = new ChangeListener() {
 		public void stateChanged(ChangeEvent e) {
 			thicknessStat.setText(String.format("%s", thicknessSlider.getValue()));
 			canvas.setThickness(thicknessSlider.getValue());
 		}
 	};
-	
+
 	ActionListener listener = new ActionListener() {
 
 		public void actionPerformed(ActionEvent event) {
@@ -93,6 +91,10 @@ public class Paint extends JFrame {
 				canvas.rect();
 			} else if (event.getSource() == pencil) {
 				canvas.pencil();
+			} else if(event.getSource() == undo) {
+				canvas.undo();
+			} else if(event.getSource() == redo) {
+				canvas.redo();
 			} else if (event.getSource() == saveButton) {
 				if (saveCounter == 0) {
 					fileChooser = new JFileChooser();
@@ -132,9 +134,10 @@ public class Paint extends JFrame {
 
 	public Paint(int width, int height) {
 		super("Paint (" + width + "X" + height + ")");
-		this.width = width;
-		this.height = height;
-		
+		setIconImage(Toolkit.getDefaultToolkit().getImage(Paint.class.getResource("/javax/swing/plaf/metal/icons/ocean/warning.png")));
+		//this.width = width;
+		//this.height = height;
+
 		for (LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
 			if ("Nimbus".equals(info.getName())) {
 				try {
@@ -146,37 +149,50 @@ public class Paint extends JFrame {
 				break;
 			}
 		}
-		
-		setLayout(new BorderLayout());
+
+		getContentPane().setLayout(new BorderLayout());
 		canvas = new Canvas();
 
-		add(canvas, BorderLayout.CENTER);
+		getContentPane().add(canvas, BorderLayout.CENTER);
 
 		JPanel top = new JPanel();
-		
 
-
-		
-				
 		JPanel panel1 = new JPanel();
-		
+
 		Box box = Box.createVerticalBox();
 		Box box1 = Box.createHorizontalBox();
-
+		
+		
+		undo = new JButton(undoIcon);
+		undo.setToolTipText("Undo");
+		undo.setPreferredSize(new Dimension(40, 40));
+		undo.addActionListener(listener);
+		redo = new JButton(redoIcon);
+		redo.setToolTipText("Redo");
+		redo.setPreferredSize(new Dimension(40, 40));
+		redo.addActionListener(listener);
 		pencil = new JButton(pencilIcon);
+		pencil.setToolTipText("Pencil");
 		pencil.setPreferredSize(new Dimension(40, 40));
 		pencil.addActionListener(listener);
 		rectangle = new JButton(rect);
+		rectangle.setToolTipText("Rectangle");
 		rectangle.setPreferredSize(new Dimension(40, 40));
 		rectangle.addActionListener(listener);
-		
-		thicknessSlider = new JSlider(JSlider.HORIZONTAL, 0, 50, 1);
-		thicknessSlider.setMajorTickSpacing(25);
+		clearButton = new JButton(clearIcon);
+		clearButton.setToolTipText("Clear");
+		clearButton.setPreferredSize(new Dimension(40, 40));
+		clearButton.addActionListener(listener);
+
+
+		thicknessSlider = new JSlider(JSlider.HORIZONTAL, 0, 9, 1);
+		thicknessSlider.setToolTipText("Pencil Thickness");
+		thicknessSlider.setMajorTickSpacing(4);
 		thicknessSlider.setPaintTicks(true);
 		thicknessSlider.setPreferredSize(new Dimension(40, 40));
 		thicknessSlider.addChangeListener(thick);
-		
-		
+
+
 		blackButton = new JButton();
 		blackButton.setBackground(Color.BLACK);
 		blackButton.setPreferredSize(new Dimension(40, 40));
@@ -222,7 +238,8 @@ public class Paint extends JFrame {
 		lightGrayButton.setPreferredSize(new Dimension(40, 40));
 		lightGrayButton.addActionListener(listener);
 		
-		
+
+
 		saveButton = new JMenuItem("Save", save);
 		saveButton.addActionListener(listener);
 		saveAsButton = new JMenuItem("Save As...", save);
@@ -231,24 +248,29 @@ public class Paint extends JFrame {
 		loadButton.addActionListener(listener);
 		colorPicker = new JMenuItem("Color Picker");
 		colorPicker.addActionListener(listener);
-		clearButton = new JMenuItem("Clear");
 		clearButton.addActionListener(listener);
 
 		filenameBar = new JLabel("No file");
-		thicknessStat = new JLabel("1");
 
 		box.add(Box.createVerticalStrut(40));
+		box.add(undo, BorderLayout.NORTH);
+		box.add(Box.createVerticalStrut(5));
+		box.add(redo, BorderLayout.NORTH);	
+		box.add(Box.createVerticalStrut(5));
 		box1.add(thicknessSlider, BorderLayout.NORTH);
-		box1.add(thicknessStat, BorderLayout.NORTH);
 		box.add(box1, BorderLayout.NORTH);
 		
+		thicknessStat = new JLabel("1");
+		box1.add(thicknessStat, BorderLayout.NORTH);
 		box.add(Box.createVerticalStrut(5));
 		box.add(pencil, BorderLayout.NORTH);
 		box.add(Box.createVerticalStrut(5));
 		box.add(rectangle, BorderLayout.NORTH);
-		panel1.add(filenameBar, BorderLayout.SOUTH);
+		box.add(Box.createVerticalStrut(5));
+		box.add(clearButton);
+		//panel1.add(filenameBar, BorderLayout.SOUTH);
 
-		
+
 		JMenuBar menuBar = new JMenuBar();
 		JMenu menu = new JMenu("Options");
 		menuBar.add(menu);
@@ -257,7 +279,6 @@ public class Paint extends JFrame {
 		menu.add(saveAsButton);
 		menu.add(loadButton);
 		menu.add(colorPicker);
-		menu.add(clearButton);
 
 		top.add(greenButton);
 		top.add(blueButton);
@@ -271,16 +292,16 @@ public class Paint extends JFrame {
 		top.add(cyanButton);
 		top.add(lightGrayButton);
 		
-		add(top, BorderLayout.NORTH);
-		
-		add(panel1, BorderLayout.SOUTH);
-		add(box, BorderLayout.WEST);
 
+		getContentPane().add(top, BorderLayout.NORTH);
+		getContentPane().add(panel1, BorderLayout.SOUTH);
+		getContentPane().add(box, BorderLayout.WEST);
 		setVisible(true);
+		setSize(900, 600);
+		setLocationRelativeTo(null);
+		setTitle("BAD Paint");
 
-		setSize(width + 79, height + 11);
-		
-		pack();
+		//pack();
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
 	}

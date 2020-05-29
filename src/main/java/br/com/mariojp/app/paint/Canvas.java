@@ -23,22 +23,29 @@ import javax.imageio.ImageIO;
 import javax.swing.JComponent;
 import javax.swing.event.MouseInputAdapter;
 
+import br.com.mariojp.app.paint.CanvasMemento;
+import br.com.mariojp.app.paint.CanvasCaretaker;
+
 public class Canvas extends JComponent {
-	
-	/**
-	 * 
-	 */
+
+
 	private static final long serialVersionUID = 1L;
-	
+
 	private int X1, Y1, X2, Y2;
 	private Graphics2D g;
 	private Image img, background;
 	ArrayList<Shape> shapes = new ArrayList<Shape>();
 	private Shape shape;
 	private MouseMotionListener motion;
-	private MouseListener listener;
+	private MouseListener listener, release;
 	MyMouseListener ml = new MyMouseListener();
+	private CanvasCaretaker selfCaretaker;
 
+	public Canvas() {
+		setBackground(Color.WHITE);
+		defaultListener();
+		selfCaretaker = new CanvasCaretaker(/* saveState() */);
+	}
 
 	public void save(File file) {
 		try {
@@ -57,26 +64,32 @@ public class Canvas extends JComponent {
 		}
 	}
 
+	public CanvasMemento saveState() {
+		return new CanvasMemento(copyImage(img));
+	}
+
+	public void restoreState(CanvasMemento snapshot) {
+		if (snapshot != null) {
+			Image state = copyImage(snapshot.getState());
+			setImage(state);
+		}
+	}
+
 	protected void paintComponent(Graphics g1) {
 		if (img == null) {
 			img = createImage(getSize().width, getSize().height);
 			g = (Graphics2D) img.getGraphics();
-			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
-					RenderingHints.VALUE_ANTIALIAS_ON);
+			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 			clear();
+			selfCaretaker.doDraw(saveState());
 		}
-		
+
 		g1.drawImage(img, 0, 0, null);
-		
+
 		if (shape != null) {
 			Graphics2D g2d = (Graphics2D) g;
 			g2d.fill(shape);
 		}
-	}
-
-	public Canvas() {
-		setBackground(Color.WHITE);
-		defaultListener();
 	}
 
 	public void defaultListener() {
@@ -87,7 +100,11 @@ public class Canvas extends JComponent {
 				Y2 = e.getY();
 			}
 		};
-
+		release = new MouseAdapter() {
+			public void mouseReleased(MouseEvent e) {
+				selfCaretaker.doDraw(saveState());
+			}
+		};
 		motion = new MouseMotionAdapter() {
 			public void mouseDragged(MouseEvent e) {
 				X1 = e.getX();
@@ -103,6 +120,17 @@ public class Canvas extends JComponent {
 		};
 		addMouseListener(listener);
 		addMouseMotionListener(motion);
+		addMouseListener(release);
+	}
+
+	public void undo() {
+		CanvasMemento historySnapshot = selfCaretaker.undo();
+		restoreState(historySnapshot);
+	}
+
+	public void redo() {
+		CanvasMemento historySnapshot = selfCaretaker.redo();
+		restoreState(historySnapshot);
 	}
 
 	public void addShape(Shape shape, Color color) {
@@ -111,6 +139,7 @@ public class Canvas extends JComponent {
 		g2d.setColor(color);
 		g2d.draw(shape);
 		repaint();
+		System.out.println(shape);
 	}
 
 	public void red() {
@@ -173,10 +202,12 @@ public class Canvas extends JComponent {
 	}
 
 	public void pencil() {
-		removeMouseListener(ml);
-		removeMouseMotionListener(ml);
-		defaultListener();
-		
+		if(getMouseListeners()[0] == ml) {
+			removeMouseListener(ml);
+			removeMouseMotionListener(ml);
+			System.out.println("olaf");
+			defaultListener();
+		}
 	}
 
 	public void rect() {
@@ -184,12 +215,12 @@ public class Canvas extends JComponent {
 		removeMouseMotionListener(motion);
 		addMouseListener(ml);
 		addMouseMotionListener(ml);
+
 	}
 
 	private void setImage(Image img) {
 		g = (Graphics2D) img.getGraphics();
-		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
-				RenderingHints.VALUE_ANTIALIAS_ON);
+		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 		g.setPaint(Color.black);
 		this.img = img;
 		repaint();
@@ -201,8 +232,7 @@ public class Canvas extends JComponent {
 	}
 
 	private BufferedImage copyImage(Image img) {
-		BufferedImage copyOfImage = new BufferedImage(getSize().width,
-				getSize().height, BufferedImage.TYPE_INT_RGB);
+		BufferedImage copyOfImage = new BufferedImage(getSize().width, getSize().height, BufferedImage.TYPE_INT_RGB);
 		Graphics g = copyOfImage.createGraphics();
 		g.drawImage(img, 0, 0, getWidth(), getHeight(), null);
 		return copyOfImage;
@@ -212,19 +242,16 @@ public class Canvas extends JComponent {
 		g.setStroke(new BasicStroke(thick, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
 	}
 
-	class MyMouseListener extends MouseInputAdapter
-	{
+	class MyMouseListener extends MouseInputAdapter {
 		private Point startPoint;
 		Rectangle retangulo;
 
-		public void mousePressed(MouseEvent e)
-		{
+		public void mousePressed(MouseEvent e) {
 			startPoint = e.getPoint();
 			retangulo = new Rectangle();
 		}
 
-		public void mouseDragged(MouseEvent e)
-		{
+		public void mouseDragged(MouseEvent e) {
 			int x = Math.min(startPoint.x, e.getX());
 			int y = Math.min(startPoint.y, e.getY());
 			int width = Math.abs(startPoint.x - e.getX());
@@ -234,17 +261,12 @@ public class Canvas extends JComponent {
 			repaint();
 		}
 
-		public void mouseReleased(MouseEvent e)
-		{
-			if (retangulo.width != 0 || retangulo.height != 0)
-			{
+		public void mouseReleased(MouseEvent e) {
+			if (retangulo.width != 0 || retangulo.height != 0) {
 				addShape(retangulo, e.getComponent().getForeground());
 			}
-
 			shape = null;
 		}
 	}
 
 }
-
-	
