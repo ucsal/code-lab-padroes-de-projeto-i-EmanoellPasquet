@@ -12,4 +12,4 @@ public class CanvasMemento {
     public Image getState() {
         return stateImage;
     }
-}
+} 

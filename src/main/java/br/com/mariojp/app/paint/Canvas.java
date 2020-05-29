@@ -52,8 +52,8 @@ public class Canvas extends JComponent {
 			ImageIO.write((RenderedImage) img, "PNG", file);
 		} catch (IOException ex) {
 		}
-	}
-
+	} 
+ 
 	public void load(File file) {
 		try {
 			img = ImageIO.read(file);

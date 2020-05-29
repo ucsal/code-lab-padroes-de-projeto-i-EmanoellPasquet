@@ -30,7 +30,6 @@ public class Paint extends JFrame {
 
 	private static final long serialVersionUID = 1L;
 
-
 	private Canvas canvas;
 	private Color color = Color.WHITE;
 	private JButton blackButton, blueButton, greenButton, redButton, magentaButton, grayButton,

@@ -34,4 +34,4 @@ public class CanvasCaretaker {
 
         currentSnapshot = snapshot;
     }
-}
+} 
